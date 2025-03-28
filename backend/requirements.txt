@@ -1,0 +1,7 @@
+fastapi
+python-dotenv
+uvicorn  # Recommended ASGI server for FastAPI
+langchain_community 
+pypdf
+docx2txt
+

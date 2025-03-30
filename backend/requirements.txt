@@ -6,3 +6,6 @@ pypdf
 docx2txt
 python-multipart
 azure-storage-blob
+pypdf
+motor #async mongodb driver
+langchain_openai

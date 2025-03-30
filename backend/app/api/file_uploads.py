@@ -42,6 +42,7 @@ app = APIRouter()
 llm=ChatOpenAI(model="gpt-4o-mini",temperature=0)
 structured_llm=llm.with_structured_output(CVUserData)
 @app.post("/upload-files-process/")
+
 async def upload_files(
     files: List[UploadFile] = File(...),  # Lists of files will be sent from frontend
     session_cookie: str = Form(...),  # session cookie(after the auth) 

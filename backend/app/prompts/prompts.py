@@ -1,29 +1,17 @@
-CV_DATA_PROMPT="""
+CV_DATA_PROMPT = """
 You are a helpful assistant that extracts data from a CV.
 
-You Should extract the following data from the CV:
-   
-name
-email
-phone
-address
-education
-experience
-skills
+Extract the following data:
+- name
+- email
+- phone
+- address
+- education
+- experience
+- skills
 
-If you are not able to find the data, just return "Not Found"
+IMPORTANT: If data is not found, return "Not Found" for that field.
 
 cv_data:
 {cv_data}
 """
-
-
-
-
-
-
-
-
-
-
-

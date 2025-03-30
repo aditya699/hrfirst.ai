@@ -28,10 +28,13 @@ from app.database.get_client import get_client
 from langchain_openai import ChatOpenAI
 from app.schemas.file_uploads import CVUserData
 from app.prompts.prompts import CV_DATA_PROMPT
+from langchain_community.document_loaders import Docx2txtLoader
+from langchain_anthropic import ChatAnthropic #type: ignore
 
 load_dotenv()
 
 os.environ["OPENAI_API_KEY"]=os.getenv("OPENAI_API_KEY")
+os.environ["ANTHROPIC_API_KEY"]=os.getenv("ANTHROPIC_API_KEY")
 CONNECTION_STRING=os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 CONTAINER_NAME="hr-first"
 
@@ -39,10 +42,11 @@ blob_service_client=BlobServiceClient.from_connection_string(CONNECTION_STRING)
 container_client=blob_service_client.get_container_client(CONTAINER_NAME)
 
 app = APIRouter()
-llm=ChatOpenAI(model="gpt-4o-mini",temperature=0)
+# llm=ChatOpenAI(model="gpt-4o-mini",temperature=0)
+llm=ChatAnthropic(model="claude-3-5-haiku-20241022",temperature=0)
 structured_llm=llm.with_structured_output(CVUserData)
-@app.post("/upload-files-process/")
 
+@app.post("/upload-files-process/")
 async def upload_files(
     files: List[UploadFile] = File(...),  # Lists of files will be sent from frontend
     session_cookie: str = Form(...),  # session cookie(after the auth) 
@@ -111,6 +115,23 @@ async def upload_files(
                     try:
                         response = await structured_llm.ainvoke(CV_DATA_PROMPT.format(cv_data=text_content))
                     except Exception as e:
+                        print("Error in processing file: ",e)   
+                        #Dump it database the error
+
+                        error_dict={
+                            "file_name": file.filename,
+                            "error": str(e),
+                            "user_id": user_id,
+                            "user_email": user_email,
+                            "uploaded_at": datetime.now(),
+                            "type":"api-error"
+                        }
+                        client=await get_client()
+                        if client:
+                            db=client["hr-first"]
+                            error_collection=db["error-log"]
+                            await error_collection.insert_one(error_dict)
+                        
                         response = CVUserData(
                             name="Not Found",
                             email="Not Found",
@@ -166,7 +187,10 @@ async def upload_files(
                     print("Error in processing file: ",e)
                     error_dict={
                         "file_name": file.filename,
-                        "error": str(e)
+                        "error": str(e),
+                        "user_id": user_id,
+                        "user_email": user_email,
+                        "uploaded_at": datetime.now()
                     }
                     client=await get_client()
                     if client:
@@ -182,15 +206,107 @@ async def upload_files(
             
             if file.content_type=="image/jpeg" or file.content_type=="image/png":
                 #TODO : Extract text from image
+                #NOTE : Resumes are not uploaded as images , will use the same design for chat with data
                 pass
              
             if file.content_type=="text/plain":
                 #TODO : Extract text from text file
+                #NOTE : Resumes are not uploaded as text files , will use the same design for chat with data
                 pass
 
             if file.content_type=="application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                
                 #TODO : Extract text from word document
-                pass
+                try:
+
+                    # Save file temporarily to process with Docx2txtLoader  
+                    temp_file_path = f"temp_{file.filename}"
+                    with open(temp_file_path, "wb") as temp_file:
+                        temp_file.write(file_content)
+
+                    loader=Docx2txtLoader(temp_file_path)
+                    documents=loader.load()
+                    text_content=""
+                    for doc in documents:
+                        text_content+=doc.page_content+"\n"
+                
+                    try:
+                        response=await structured_llm.ainvoke(CV_DATA_PROMPT.format(cv_data=text_content))
+                    except Exception as e:
+                        print("Error in processing file: ",e)
+                        #Dump it database the error
+                        error_dict={
+                            "file_name": file.filename,
+                            "error": str(e),
+                            "user_id": user_id,
+                            "user_email": user_email,
+                            "uploaded_at": datetime.now(),
+                            "type":"api-error"
+                        }
+                        client=await get_client()
+                        if client:
+                            db=client["hr-first"]
+                            error_collection=db["error-log"]
+                            await error_collection.insert_one(error_dict)
+                        
+                        response=CVUserData(
+                            name="Not Found",
+                            email="Not Found",
+                            phone="Not Found",
+                            address="Not Found",
+                            education="Not Found",
+                            experience="Not Found",
+                            skills="Not Found"
+                        )
+                
+                    frontend_response[file.filename]=response_dict
+
+                    metadata_dict={
+                        "file_name": file.filename,
+                        "file_size": len(file_content),
+                        "file_type": file.content_type, 
+                        "extracted_text": text_content,
+                        "user_id": user_id,
+                        "user_email": user_email,
+                        "uploaded_at": datetime.now(),
+                        "extracted_data": response_dict,
+                        "name": response.name,
+                        "email": response.email,
+                        "phone": response.phone,
+                        "address": response.address,
+                        "education": response.education,
+                        "experience": response.experience,
+                        "skills": response.skills
+                    }
+
+                    #push metadata to mongodb
+                    client=await get_client()
+                    if client:
+                        db=client["hr-first"]
+                        collection=db["cv-data"]
+                        await collection.insert_one(metadata_dict)
+
+                    correct_files+=1
+
+                except Exception as e:
+                    print("Error in processing file: ",e)
+                    error_dict={
+                        "file_name": file.filename,
+                        "error": str(e),
+                        "user_id": user_id,
+                        "user_email": user_email,
+                        "uploaded_at": datetime.now()
+                    }
+                    client=await get_client()
+                    if client:
+                        db=client["hr-first"]
+                        error_collection=db["error-log"]
+                        await error_collection.insert_one(error_dict)
+
+                finally:
+                    # Clean up temporary file
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
     
     except Exception as e:
         return {"error": str(e)}  # Return error message

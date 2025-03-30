@@ -9,3 +9,5 @@ azure-storage-blob
 pypdf
 motor #async mongodb driver
 langchain_openai
+docx2txt
+langchain-anthropic

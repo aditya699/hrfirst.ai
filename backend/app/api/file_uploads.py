@@ -32,7 +32,8 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain_anthropic import ChatAnthropic #type: ignore
 from langchain_core.messages import HumanMessage
 import base64
-
+from app.schemas.jd import JobDescriptionRequest
+from fastapi import Body
 load_dotenv()
 
 os.environ["OPENAI_API_KEY"]=os.getenv("OPENAI_API_KEY")
@@ -313,12 +314,51 @@ async def upload_files(
     incorrect_files = file_counter - correct_files
     return {"message": f"You have uploaded {file_counter} files, {correct_files} files are correct processed and {incorrect_files} files are not processed.Here are the details of the processed files: {frontend_response}"}
 
+
+
+@app.post("/create-job-description/")
+async def create_job_description(
+    job_title:str=Form(None),
+    job_description:str=Form(None),
+    job_location:str=Form(None),
+    job_type:str=Form(None),
+    job_category:str=Form(None),
+    job_industry:str=Form(None),
+    job_salary:str=Form(None),
+    job_experience:str=Form(None),
+    job_education:str=Form(None),
+    job_skills:str=Form(None),
+    job_benefits:str=Form(None),
+    job_responsibilities:str=Form(None),
+    job_requirements:str=Form(None),
+    job_application_deadline:str=Form(None),
+    company_name:str=Form(None),
+    company_description:str=Form(None),
+    company_benefits:str=Form(None),
+    company_location:str=Form(None),
+    company_industry:str=Form(None),
+    company_size:str=Form(None),
+    company_website:str=Form(None),
+    session_cookie: str = Form(...),
+):
+    """
+    This function is used to create a job description.
+    """
+    pass
+
+
+
+
+
+
+
 @app.post("/upload-files-process-chat/")
 async def upload_files(
     files: List[UploadFile] = File(...),  # Lists of files will be sent from frontend
     session_cookie: str = Form(...),  # session cookie(after the auth) 
 ):
     """
+    NOTE :This is not related to the file upload process, it is for chat with data
     This function is used to upload files to the server and process them.
 
     Args:

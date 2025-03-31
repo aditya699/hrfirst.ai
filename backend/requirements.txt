@@ -11,3 +11,4 @@ motor #async mongodb driver
 langchain_openai
 docx2txt
 langchain-anthropic
+langchain-core

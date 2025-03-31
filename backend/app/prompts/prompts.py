@@ -5,7 +5,6 @@ Extract the following data:
 - name
 - email
 - phone
-- address
 - education
 - experience
 - skills

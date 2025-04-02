@@ -12,3 +12,4 @@ langchain_openai
 docx2txt
 langchain-anthropic
 langchain-core
+jinja2

@@ -32,7 +32,8 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain_anthropic import ChatAnthropic #type: ignore
 from langchain_core.messages import HumanMessage
 import base64
-from app.schemas.jd import JobDescriptionRequest
+from app.schemas.jd import JD
+from app.prompts.prompts import JD_PROMPT
 from fastapi import Body
 load_dotenv()
 
@@ -51,6 +52,8 @@ llm_image=ChatOpenAI(model="gpt-4o",temperature=0)
 # llm=ChatAnthropic(model="claude-3-5-haiku-20241022",temperature=0)
 structured_llm=llm.with_structured_output(CVUserData)
 
+llm_jd=ChatOpenAI(model="gpt-4o",temperature=0) #using a little more powerful model for job description
+structured_llm_jd=llm_jd.with_structured_output(JD)
 @app.post("/upload-files-process/")
 async def upload_files(
     files: List[UploadFile] = File(...),  # Lists of files will be sent from frontend
@@ -68,7 +71,7 @@ async def upload_files(
     
     Example Output:
     {
-    "message": "You have uploaded 4 files, 4 files are correct processed and 0 files are not processed.Here are the details of the processed files: {'Aditya Bhatt CV.pdf': {'name': 'Aditya Bhatt', 'email': 'adityabhatt19058568031.stats@rla.du.ac.in', 'phone': '+91 7303041453', 'address': 'Not Found', 'education': 'PG Diploma in Software Engineering for Data Science (IIIT Hyderabad), BSC(H) Statistics (Delhi University)', 'experience': 'Mccormick – Supply Chain Analyst 1 (Apr 2024 – Present), Neenopal - Business Analyst (July 2022 – Apr 2024)', 'skills': 'Programming (Python, R, Pyspark, Syntactical JS, C), Visualization (Power BI, Tableau, Matplotlib, Seaborn, Plotly, ggplot, Folium, Excel, R, Google Data Studio), Machine Learning (Supervised and Unsupervised Learning, ANN, CNN, RNN, LSTM, Time Series Analysis, PyCaret, Pytorch, TensorFlow, MLFlow, Azure ML Studio, Azure Language, Azure Vision, Text Preprocessing, Text Encoding & Embedding, Hugging Face, OpenAI, Langchain, RAG, Fine Tunning, Langsmith, LLMs, AzureOpenAI, Chainlit, NLP, Tranformers, Google Vertex AI, AI Agents, Langgraph), Statistics (Descriptive Statistics, Inferential Statistics, Algebra, SPSS, Hypothesis Testing, Survey Sampling, Linear Modelling), Database (Azure Sql, MySQL, T-SQL, Postgre SQL, SparkSQL, MongoDB, Cassandra, MQL, Vector DBs), Deployment/Backend (Flask, FastAPI, Streamlit, Heroku, Azure, AWS SageMaker, Docker, PyTest, SQLAlchemy, Azure DevOps, GitHub), Others (Power Platform, TableauPrep, BeautifulSoup, SAP Crastal Report, Azure Data Factory, Azure DataBricks, Azure Synpase, Explainable AI, HTML, Recommendation System, Markov Decision Process)'}, 'Pulkit_Analyst_4yr.pdf': {'name': 'Pulkit Rawat', 'email': 'pulkitrawat97@gmail.com', 'phone': '7417700336', 'address': 'Not Found', 'education': 'GLA University, Mathura | Bachelor of Technology in Computer Science & Engineering Aug 2015 - Jun 2019', 'experience': 'Senior Analyst at Infosys Limited Jun 2022 – Jan 2024; Analyst at Tata Consultancy Services May 2019 – Jun 2022', 'skills': 'Python, SQL, Microsoft Power BI, JIRA, Google Big Query, DAX, Jupyter Notebook IDE, Microsoft Excel, AWS, Data Visualization & Reporting, Customer Segmentation, Sales Performance Analysis, Pricing Strategy Development, Data Quality & Compliance, KPI Tracking, Process Documentation & Improvement, Workforce Analytics.'}, 'Ritesh_Kumar_Resume.pdf': {'name': 'Ritesh Kumar', 'email': 'pandeyritesh007@gmail.com', 'phone': '8669666079', 'address': 'Noida', 'education': 'Polytechnic from Tirupati College of Pharmacy (07/2009 – 07/2012), B.Tech from Haldia Institute Of Technology (08/2013 – 08/2016), Matriculation from St. Joseph Public School (03/2008 – 03/2009)', 'experience': 'Tech Mahindra (Associate Analyst, 09/2016 – 05/2019), Optum (Associate Data Analyst, 05/2019 – 11/2020), Accenture (Data Science Analyst, 11/2020 – present)', 'skills': 'Data Science, Machine Learning, Python, SQL/HIVE, Market Mix Modelling, Azure Databricks'}, 'DD9FB8CC-F241-4E3D-86E2-78B57B37874C.pdf': {'name': 'Mradu Singh Kushwah', 'email': 'mradu.kush19@gmail.com', 'phone': '+919818980186', 'address': 'Not Found', 'education': 'M.Sc Statistics- Ramjas College, Faculty of Mathematical Sciences, University of Delhi - 80.0% 2017-2019; B.Sc(H) Statistics –Ramjas College , University of Delhi - 79.2% 2013-2016; 12th ISC - St. Anthony’s Junior College, Agra- 93.25% 2013; 10th ICSE- St. Anthony’s Junior College, Agra- 91.2% 2011', 'experience': 'Associate Manager, Course 5 intelligence, Gurugram May 2024 – Present; Senior Data Analyst, BCG X, Boston Consulting Group, Gurugram Dec 2023 – May 2024; Data Scientist, Marketing Analytics, AB InBev, Bangalore May 2022- Dec 2023; Business Analyst & Senior Business Analyst, Customer Insights and Data Analytics (CIDA), Evalueserve, Gurugram June 2019- May 2022; Data Analyst, Vidooly Media Tech Pvt.Ltd, Noida June 2018- July 2018; Ground Researcher- Policy innovations September 2015', 'skills': 'Programming Languages: SAS (Base SAS, Proc SQL, Macros, Loops), Python, R; Tools & Platforms: MS Excel, Power BI, SPSS, MS PowerPoint, MLFlow, Alteryx (Basic), Azure ML, GitLab; Machine Learning and Data Science: Supervised Learning, Unsupervised Learning, Natural Language Processing (NLP), Time Series Analysis, Recommender Systems, Optimization & Model Selection, Marketing Analytics; Software Development & Deployment: API & Web Application Development: Flask, Front-End Web Development: HTML, CSS, JavaScript; Industry Experience: Consumer Packaged Goods (CPG) Industry, Logistics Industry, Consumer Industry, Credit Risk.'}}"
+    "message": "You have uploaded 4 files, 4 files are correct processed and 0 files are not processed.Here are the details of the processed files: {'Aditya Bhatt CV.pdf': {'name': 'Aditya Bhatt', 'email': 'adityabhatt19058568031.stats@rla.du.ac.in', 'phone': '+91 7303041453', 'address': 'Not Found', 'education': 'PG Diploma in Software Engineering for Data Science (IIIT Hyderabad), BSC(H) Statistics (Delhi University)', 'experience': 'Mccormick – Supply Chain Analyst 1 (Apr 2024 – Present), Neenopal - Business Analyst (July 2022 – Apr 2024)', 'skills': 'Programming (Python, R, Pyspark, Syntactical JS, C), Visualization (Power BI, Tableau, Matplotlib, Seaborn, Plotly, ggplot, Folium, Excel, R, Google Data Studio), Machine Learning (Supervised and Unsupervised Learning, ANN, CNN, RNN, LSTM, Time Series Analysis, PyCaret, Pytorch, TensorFlow, MLFlow, Azure ML Studio, Azure Language, Azure Vision, Text Preprocessing, Text Encoding & Embedding, Hugging Face, OpenAI, Langchain, RAG, Fine Tunning, Langsmith, LLMs, AzureOpenAI, Chainlit, NLP, Tranformers, Google Vertex AI, AI Agents, Langgraph), Statistics (Descriptive Statistics, Inferential Statistics, Algebra, SPSS, Hypothesis Testing, Survey Sampling, Linear Modelling), Database (Azure Sql, MySQL, T-SQL, Postgre SQL, SparkSQL, MongoDB, Cassandra, MQL, Vector DBs), Deployment/Backend (Flask, FastAPI, Streamlit, Heroku, Azure, AWS SageMaker, Docker, PyTest, SQLAlchemy, Azure DevOps, GitHub), Others (Power Platform, TableauPrep, BeautifulSoup, SAP Crastal Report, Azure Data Factory, Azure DataBricks, Azure Synpase, Explainable AI, HTML, Recommendation System, Markov Decision Process)'}, 'Pulkit_Analyst_4yr.pdf': {'name': 'Pulkit Rawat', 'email': 'pulkitrawat97@gmail.com', 'phone': '7417700336', 'address': 'Not Found', 'education': 'GLA University, Mathura | Bachelor of Technology in Computer Science & Engineering Aug 2015 - Jun 2019', 'experience': 'Senior Analyst at Infosys Limited Jun 2022 – Jan 2024; Analyst at Tata Consultancy Services May 2019 – Jun 2022', 'skills': 'Python, SQL, Microsoft Power BI, JIRA, Google Big Query, DAX, Jupyter Notebook IDE, Microsoft Excel, AWS, Data Visualization & Reporting, Customer Segmentation, Sales Performance Analysis, Pricing Strategy Development, Data Quality & Compliance, KPI Tracking, Process Documentation & Improvement, Workforce Analytics.'}, 'Ritesh_Kumar_Resume.pdf': {'name': 'Ritesh Kumar', 'email': 'pandeyritesh007@gmail.com', 'phone': '8669666079', 'address': 'Noida', 'education': 'Polytechnic from Tirupati College of Pharmacy (07/2009 – 07/2012), B.Tech from Haldia Institute Of Technology (08/2013 – 08/2016), Matriculation from St. Joseph Public School (03/2008 – 03/2009)', 'experience': 'Tech Mahindra (Associate Analyst, 09/2016 – 05/2019), Optum (Associate Data Analyst, 05/2019 – 11/2020), Accenture (Data Science Analyst, 11/2020 – present)', 'skills': 'Data Science, Machine Learning, Python, SQL/HIVE, Market Mix Modelling, Azure Databricks'}, 'DD9FB8CC-F241-4E3D-86E2-78B57B37874C.pdf': {'name': 'Mradu Singh Kushwah', 'email': 'mradu.kush19@gmail.com', 'phone': '+919818980186', 'address': 'Not Found', 'education': 'M.Sc Statistics- Ramjas College, Faculty of Mathematical Sciences, University of Delhi - 80.0% 2017-2019; B.Sc(H) Statistics –Ramjas College , University of Delhi - 79.2% 2013-2016; 12th ISC - St. Anthony's Junior College, Agra- 93.25% 2013; 10th ICSE- St. Anthony's Junior College, Agra- 91.2% 2011', 'experience': 'Associate Manager, Course 5 intelligence, Gurugram May 2024 – Present; Senior Data Analyst, BCG X, Boston Consulting Group, Gurugram Dec 2023 – May 2024; Data Scientist, Marketing Analytics, AB InBev, Bangalore May 2022- Dec 2023; Business Analyst & Senior Business Analyst, Customer Insights and Data Analytics (CIDA), Evalueserve, Gurugram June 2019- May 2022; Data Analyst, Vidooly Media Tech Pvt.Ltd, Noida June 2018- July 2018; Ground Researcher- Policy innovations September 2015', 'skills': 'Programming Languages: SAS (Base SAS, Proc SQL, Macros, Loops), Python, R; Tools & Platforms: MS Excel, Power BI, SPSS, MS PowerPoint, MLFlow, Alteryx (Basic), Azure ML, GitLab; Machine Learning and Data Science: Supervised Learning, Unsupervised Learning, Natural Language Processing (NLP), Time Series Analysis, Recommender Systems, Optimization & Model Selection, Marketing Analytics; Software Development & Deployment: API & Web Application Development: Flask, Front-End Web Development: HTML, CSS, JavaScript; Industry Experience: Consumer Packaged Goods (CPG) Industry, Logistics Industry, Consumer Industry, Credit Risk.'}}"
     }
     """
     #from the session cookie, we will get the user_id and user_email(for now since auth is not implemented let it be like this)
@@ -323,7 +326,6 @@ async def create_job_description(
     job_location:str=Form(None),
     job_type:str=Form(None),
     job_category:str=Form(None),
-    job_industry:str=Form(None),
     job_salary:str=Form(None),
     job_experience:str=Form(None),
     job_education:str=Form(None),
@@ -340,324 +342,113 @@ async def create_job_description(
     company_size:str=Form(None),
     company_website:str=Form(None),
     session_cookie: str = Form(...),
+    ai_feature:str=Form(None)
 ):
     """
     This function is used to create a job description.
     """
-    pass
 
-
-
-
-
-
-
-@app.post("/upload-files-process-chat/")
-async def upload_files(
-    files: List[UploadFile] = File(...),  # Lists of files will be sent from frontend
-    session_cookie: str = Form(...),  # session cookie(after the auth) 
-):
-    """
-    NOTE :This is not related to the file upload process, it is for chat with data
-    This function is used to upload files to the server and process them.
-
-    Args:
-        files: List[UploadFile] = File(...): Lists of files will be sent from frontend
-        session_cookie: str = Form(...): session cookie(after the auth) 
-
-    Returns:
-        dict: A dictionary containing the number of files uploaded, the number of files processed correctly, and the details of the processed files.
     
-    Example Output:
-    {
-    "message": "You have uploaded 4 files, 4 files are correct processed and 0 files are not processed.Here are the details of the processed files: {'Aditya Bhatt CV.pdf': {'name': 'Aditya Bhatt', 'email': 'adityabhatt19058568031.stats@rla.du.ac.in', 'phone': '+91 7303041453', 'address': 'Not Found', 'education': 'PG Diploma in Software Engineering for Data Science (IIIT Hyderabad), BSC(H) Statistics (Delhi University)', 'experience': 'Mccormick – Supply Chain Analyst 1 (Apr 2024 – Present), Neenopal - Business Analyst (July 2022 – Apr 2024)', 'skills': 'Programming (Python, R, Pyspark, Syntactical JS, C), Visualization (Power BI, Tableau, Matplotlib, Seaborn, Plotly, ggplot, Folium, Excel, R, Google Data Studio), Machine Learning (Supervised and Unsupervised Learning, ANN, CNN, RNN, LSTM, Time Series Analysis, PyCaret, Pytorch, TensorFlow, MLFlow, Azure ML Studio, Azure Language, Azure Vision, Text Preprocessing, Text Encoding & Embedding, Hugging Face, OpenAI, Langchain, RAG, Fine Tunning, Langsmith, LLMs, AzureOpenAI, Chainlit, NLP, Tranformers, Google Vertex AI, AI Agents, Langgraph), Statistics (Descriptive Statistics, Inferential Statistics, Algebra, SPSS, Hypothesis Testing, Survey Sampling, Linear Modelling), Database (Azure Sql, MySQL, T-SQL, Postgre SQL, SparkSQL, MongoDB, Cassandra, MQL, Vector DBs), Deployment/Backend (Flask, FastAPI, Streamlit, Heroku, Azure, AWS SageMaker, Docker, PyTest, SQLAlchemy, Azure DevOps, GitHub), Others (Power Platform, TableauPrep, BeautifulSoup, SAP Crastal Report, Azure Data Factory, Azure DataBricks, Azure Synpase, Explainable AI, HTML, Recommendation System, Markov Decision Process)'}, 'Pulkit_Analyst_4yr.pdf': {'name': 'Pulkit Rawat', 'email': 'pulkitrawat97@gmail.com', 'phone': '7417700336', 'address': 'Not Found', 'education': 'GLA University, Mathura | Bachelor of Technology in Computer Science & Engineering Aug 2015 - Jun 2019', 'experience': 'Senior Analyst at Infosys Limited Jun 2022 – Jan 2024; Analyst at Tata Consultancy Services May 2019 – Jun 2022', 'skills': 'Python, SQL, Microsoft Power BI, JIRA, Google Big Query, DAX, Jupyter Notebook IDE, Microsoft Excel, AWS, Data Visualization & Reporting, Customer Segmentation, Sales Performance Analysis, Pricing Strategy Development, Data Quality & Compliance, KPI Tracking, Process Documentation & Improvement, Workforce Analytics.'}, 'Ritesh_Kumar_Resume.pdf': {'name': 'Ritesh Kumar', 'email': 'pandeyritesh007@gmail.com', 'phone': '8669666079', 'address': 'Noida', 'education': 'Polytechnic from Tirupati College of Pharmacy (07/2009 – 07/2012), B.Tech from Haldia Institute Of Technology (08/2013 – 08/2016), Matriculation from St. Joseph Public School (03/2008 – 03/2009)', 'experience': 'Tech Mahindra (Associate Analyst, 09/2016 – 05/2019), Optum (Associate Data Analyst, 05/2019 – 11/2020), Accenture (Data Science Analyst, 11/2020 – present)', 'skills': 'Data Science, Machine Learning, Python, SQL/HIVE, Market Mix Modelling, Azure Databricks'}, 'DD9FB8CC-F241-4E3D-86E2-78B57B37874C.pdf': {'name': 'Mradu Singh Kushwah', 'email': 'mradu.kush19@gmail.com', 'phone': '+919818980186', 'address': 'Not Found', 'education': 'M.Sc Statistics- Ramjas College, Faculty of Mathematical Sciences, University of Delhi - 80.0% 2017-2019; B.Sc(H) Statistics –Ramjas College , University of Delhi - 79.2% 2013-2016; 12th ISC - St. Anthony's Junior College, Agra- 93.25% 2013; 10th ICSE- St. Anthony's Junior College, Agra- 91.2% 2011', 'experience': 'Associate Manager, Course 5 intelligence, Gurugram May 2024 – Present; Senior Data Analyst, BCG X, Boston Consulting Group, Gurugram Dec 2023 – May 2024; Data Scientist, Marketing Analytics, AB InBev, Bangalore May 2022- Dec 2023; Business Analyst & Senior Business Analyst, Customer Insights and Data Analytics (CIDA), Evalueserve, Gurugram June 2019- May 2022; Data Analyst, Vidooly Media Tech Pvt.Ltd, Noida June 2018- July 2018; Ground Researcher- Policy innovations September 2015', 'skills': 'Programming Languages: SAS (Base SAS, Proc SQL, Macros, Loops), Python, R; Tools & Platforms: MS Excel, Power BI, SPSS, MS PowerPoint, MLFlow, Alteryx (Basic), Azure ML, GitLab; Machine Learning and Data Science: Supervised Learning, Unsupervised Learning, Natural Language Processing (NLP), Time Series Analysis, Recommender Systems, Optimization & Model Selection, Marketing Analytics; Software Development & Deployment: API & Web Application Development: Flask, Front-End Web Development: HTML, CSS, JavaScript; Industry Experience: Consumer Packaged Goods (CPG) Industry, Logistics Industry, Consumer Industry, Credit Risk.'}}"
-    }
-    """
-    #from the session cookie, we will get the user_id and user_email(for now since auth is not implemented let it be like this)
-
+    #decode the session cookie
     user_id="123"   #this would come after decoding the session cookie
     user_email="test@test.com"  #this would come after decoding the session cookie
-   
-    #push data to container with user_id as the folder name
-    user_folder_name=f"{user_id}"
 
-    file_counter=0
-    correct_files=0
-    extracted_text={}    
+    if ai_feature=="1":   #user has requested to create a job description using ai
+
+        try:
+            user_requirements=f"Job Title: {job_title}\nJob Description: {job_description}\nJob Location: {job_location}\nJob Type: {job_type}\nJob Category: {job_category}\nJob Experience: {job_experience}\nJob Education: {job_education}\nJob Skills: {job_skills}\nJob Responsibilities: {job_responsibilities}\nJob Requirements: {job_requirements}"
+
+            response=await structured_llm_jd.ainvoke(JD_PROMPT.format(user_requirements=user_requirements))
+
+            dict_response={
+                "job_title":response.job_title,
+                "job_description":response.job_description,
+                "job_location":response.job_location,
+                "job_type":response.job_type,
+                "job_category":response.job_category,
+                "job_experience":response.job_experience,
+                "job_education":response.job_education,
+                "job_skills":response.job_skills,   
+                "job_responsibilities":response.job_responsibilities,
+                "job_requirements":response.job_requirements,
+                "job_benefits":job_benefits,
+                "salary":job_salary,
+                "application_deadline":job_application_deadline,
+                "company_name":company_name,
+                "company_description":company_description,
+                "company_benefits":company_benefits,
+                "company_location":company_location,
+                "company_industry":company_industry,
+                "company_size":company_size,
+                "company_website":company_website,
+                "user_id":user_id,
+                "user_email":user_email,
+                "uploaded_at":datetime.now()
+            }
+
+            #push metadata to mongodb
+            client=await get_client()
+            if client:
+                db=client["hr-first"]
+                collection=db["jd-data"]
+                result=await collection.insert_one(dict_response)
+
+                # Convert the ObjectId to string before returning
+                            # Convert the ObjectId to string before returning
+                dict_response["_id"] = str(result.inserted_id)
+
+
+
+            return {"message":"Job description created successfully","job_description":dict_response}
+
+        except Exception as e:
+            print("Error in processing file: ",e)
+            #Dump it database the error
+            error_dict={
+                
+                "error": str(e),
+                "user_id": user_id,
+                "user_email": user_email,
+                "uploaded_at": datetime.now()
+            }
+            client=await get_client()
+            if client:
+                db=client["hr-first"]
+                error_collection=db["error-log"]
+                await error_collection.insert_one(error_dict)
+            
     
-    # Error handling for file uploads
-    try:
-        # Upload the files to the container
-        for file in files:
-            file_counter+=1
-            # Create blob path with user folder prefix
-            blob_path = f"{user_folder_name}/{file.filename}"
-            blob_client = container_client.get_blob_client(blob_path)
-            
-            # Read file content
-            file_content = await file.read()
-            
-            # Upload the file content
-            blob_client.upload_blob(file_content, overwrite=True)
+    else:                 #No ai feature is selected
+        master_dict={
+            "job_title":job_title,
+            "job_description":job_description,
+            "job_location":job_location,
+            "job_type":job_type,
+            "job_category":job_category,
+            "job_experience":job_experience,
+            "job_education":job_education,
+            "job_skills":job_skills,
+            "job_responsibilities":job_responsibilities,
+            "job_requirements":job_requirements,
+            "job_benefits":job_benefits,
+            "salary":job_salary,
+            "application_deadline":job_application_deadline,
+            "company_name":company_name,
+            "company_description":company_description,
+            "company_benefits":company_benefits,
+            "company_location":company_location,
+            "company_industry":company_industry,
+            "company_size":company_size,
+            "company_website":company_website,
+            "user_id":user_id,
+            "user_email":user_email,
+        }
 
-            # Create temporary file path for processing
-            temp_file_path = f"temp_{file.filename}"
-            
-            try:
-                # Write content to temporary file
-                with open(temp_file_path, "wb") as temp_file:
-                    temp_file.write(file_content)
-                
-                # Process PDF files
-                if file.content_type == "application/pdf":
-                    try:
-                        # Extract text from PDF
-                        loader = PyPDFLoader(temp_file_path)
-                        pages = []
-                        text_content = ""
-                        for page in loader.load():
-                            pages.append(page)
-                            text_content += page.page_content + "\n"
+        #push metadata to mongodb
+        client=await get_client()
+        if client:
+            db=client["hr-first"]
+            collection=db["jd-data"]
+            await collection.insert_one(master_dict)
 
-                        extracted_text[file.filename] = text_content
-                        
-                        # Store the extracted text with metadata
-                        metadata_dict = {
-                            "file_name": file.filename,
-                            "file_size": len(file_content),
-                            "file_type": file.content_type,
-                            "file_url": blob_client.url,
-                            "extracted_text": text_content,
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "extraction_method": "PyPDFLoader"
-                        }
-                        
-                        # Save to MongoDB
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            collection = db["chat-data"]
-                            await collection.insert_one(metadata_dict)
-                        
-                        correct_files += 1
-                        
-                    except Exception as e:
-                        print(f"Error processing PDF {file.filename}: {e}")
-                        error_dict = {
-                            "file_name": file.filename,
-                            "error": str(e),
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "type": "pdf-processing-error"
-                        }
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            error_collection = db["error-log"]
-                            await error_collection.insert_one(error_dict)
-                
-                # Process image files
-                elif file.content_type == "image/jpeg" or file.content_type == "image/png":
-                    try:
-                        # Read the image as base64 for processing with LLM
-                        with open(temp_file_path, "rb") as image_file:
-                            image_bytes = image_file.read()
-                            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                        
-                        # Create a message with the image for the model
-                        message = HumanMessage(
-                            content=[
-                                {"type": "text", "text": "Extract all text visible in this image. Format the text to maintain its original structure as much as possible."},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {"url": f"data:image/{file.content_type.split('/')[1]};base64,{image_base64}"},
-                                },
-                            ],
-                        )
-                        
-                        # Use GPT-4o for image analysis
-                        response = llm_image.invoke([message])
-                        text_content = response.content
-
-                        extracted_text[file.filename] = text_content
-                        
-                        # Store the extracted text with metadata
-                        metadata_dict = {
-                            "file_name": file.filename,
-                            "file_size": len(file_content),
-                            "file_type": file.content_type,
-                            "file_url": blob_client.url,
-                            "extracted_text": text_content,
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "extraction_method": "gpt-4o-vision"
-                        }
-                        
-                        # Save to MongoDB
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            collection = db["chat-data"]
-                            await collection.insert_one(metadata_dict)
-                        
-                        correct_files += 1
-                        
-                    except Exception as e:
-                        print(f"Error processing image {file.filename}: {e}")
-                        error_dict = {
-                            "file_name": file.filename,
-                            "error": str(e),
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "type": "image-processing-error"
-                        }
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            error_collection = db["error-log"]
-                            await error_collection.insert_one(error_dict)
-                
-                # Process text files
-                elif file.content_type == "text/plain":
-                    try:
-                        # Read text file content
-                        with open(temp_file_path, "r") as text_file:
-                            text_content = text_file.read()
-                        
-                        extracted_text[file.filename] = text_content
-
-                        # Save the extracted text to the metadata dictionary
-                        metadata_dict = {
-                            "file_name": file.filename,
-                            "file_size": len(file_content),
-                            "file_type": file.content_type,
-                            "file_url": blob_client.url,
-                            "extracted_text": text_content,
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "extraction_method": "text-reader"
-                        }
-
-                        # Save the metadata to MongoDB
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            collection = db["chat-data"]
-                            await collection.insert_one(metadata_dict)
-
-                        correct_files += 1
-                        
-                    except Exception as e:
-                        print(f"Error processing text file {file.filename}: {e}")
-                        error_dict = {
-                            "file_name": file.filename,
-                            "error": str(e),
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "type": "text-processing-error"
-                        }
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            error_collection = db["error-log"]
-                            await error_collection.insert_one(error_dict)
-
-                # Process Word documents
-                elif file.content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                    try:
-                        # Extract text from Word document
-                        loader = Docx2txtLoader(temp_file_path)
-                        documents = loader.load()
-                        text_content = ""
-                        for doc in documents:
-                            text_content += doc.page_content + "\n"
-
-                        extracted_text[file.filename] = text_content
-                        
-                        # Store the extracted text with metadata
-                        metadata_dict = {
-                            "file_name": file.filename,
-                            "file_size": len(file_content),
-                            "file_type": file.content_type,
-                            "file_url": blob_client.url,
-                            "extracted_text": text_content,
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "extraction_method": "Docx2txtLoader"
-                        }
-                        
-                        # Save to MongoDB
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            collection = db["chat-data"]
-                            await collection.insert_one(metadata_dict)
-                        
-                        correct_files += 1
-                        
-                    except Exception as e:
-                        print(f"Error processing Word document {file.filename}: {e}")
-                        error_dict = {
-                            "file_name": file.filename,
-                            "error": str(e),
-                            "user_id": user_id,
-                            "user_email": user_email,
-                            "uploaded_at": datetime.now(),
-                            "type": "docx-processing-error"
-                        }
-                        client = await get_client()
-                        if client:
-                            db = client["hr-first"]
-                            error_collection = db["error-log"]
-                            await error_collection.insert_one(error_dict)
-                
-                else:
-                    print(f"Unsupported file type: {file.content_type} for file {file.filename}")
-                    error_dict = {
-                        "file_name": file.filename,
-                        "error": f"Unsupported file type: {file.content_type}",
-                        "user_id": user_id,
-                        "user_email": user_email,
-                        "uploaded_at": datetime.now(),
-                        "type": "unsupported-file-type"
-                    }
-                    client = await get_client()
-                    if client:
-                        db = client["hr-first"]
-                        error_collection = db["error-log"]
-                        await error_collection.insert_one(error_dict)
-                    
-            except Exception as e:
-                print(f"Error processing file {file.filename}: {e}")
-                error_dict = {
-                    "file_name": file.filename,
-                    "error": str(e),
-                    "user_id": user_id,
-                    "user_email": user_email,
-                    "uploaded_at": datetime.now(),
-                    "type": "general-processing-error"
-                }
-                client = await get_client()
-                if client:
-                    db = client["hr-first"]
-                    error_collection = db["error-log"]
-                    await error_collection.insert_one(error_dict)
-                
-            finally:
-                # Clean up temporary file
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
-                    
-    except Exception as e:
-        return {"error": str(e)}  # Return error message
-
-    incorrect_files = file_counter - correct_files
-    return {"message": f"You have uploaded {file_counter} files, {correct_files} files are correct processed and {incorrect_files} files are not processed. Data extracted from the files: {extracted_text}"}
+        return {"message":"Job description created successfully","job_description":master_dict}

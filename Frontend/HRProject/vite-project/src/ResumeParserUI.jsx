@@ -68,12 +68,15 @@ const ResumeParserUI = () => {
     // Create FormData object
     const formData = new FormData();
     
-    // Use 'files' as the parameter name to match FastAPI's expectation
+    // Add files to FormData
     selectedFiles.forEach(file => {
       console.log(`Adding file to form: ${file.name} (${file.size} bytes)`);
       formData.append('files', file);
     });
-
+    
+    // Important: Add the session_cookie field required by the backend
+    formData.append('session_cookie', '123'); // Replace with actual session cookie in production
+    
     try {
       console.log('Sending upload request to API...');
       
@@ -101,8 +104,9 @@ const ResumeParserUI = () => {
       console.log('Upload successful:', response.data);
       setUploadResults(response.data);
       
-      // Optional: Clear files after successful upload
-      // setSelectedFiles([]);
+      // Display success message
+      alert('Files uploaded successfully!');
+      
     } catch (error) {
       console.error('Error uploading files:', error);
       
@@ -113,7 +117,6 @@ const ResumeParserUI = () => {
         // that falls out of the range of 2xx
         console.error('Error response data:', error.response.data);
         console.error('Error response status:', error.response.status);
-        console.error('Error response headers:', error.response.headers);
         
         errorMessage = `Server error: ${error.response.status} - ${
           error.response.data?.detail || 'Unknown error'
@@ -138,11 +141,40 @@ const ResumeParserUI = () => {
     }
   };
 
+  // Function to display parsed results from the API response
+  const renderUploadResults = () => {
+    if (!uploadResults) return null;
+    
+    // Check if uploadResults has a message property (which your API returns)
+    if (uploadResults.message) {
+      // Display extracted data from the response
+      return (
+        <div className="upload-results">
+          <h3>Upload Results</h3>
+          <div className="results-content">
+            <p>{uploadResults.message}</p>
+            
+            {/* If you want to display the parsed resume data */}
+            {uploadResults.job_description && (
+              <div className="parsed-data">
+                <h4>Parsed Data</h4>
+                <pre>{JSON.stringify(uploadResults.job_description, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <div className={`app-container ${isUploading ? 'uploading' : ''}`}>
       {isUploading && (
         <div className="overlay">
           <div className="progress-modal">
+            <h3>Uploading Files</h3>
             <div className="progress-bar-container">
               <div 
                 className="progress-bar-fill" 
@@ -150,7 +182,11 @@ const ResumeParserUI = () => {
               ></div>
             </div>
             <p className="progress-percentage">{uploadProgress}% Complete</p>
-            <p className="friendly-message">Grab a coffee or tea until the file processing completes!</p>
+            <p className="friendly-message">
+              Grab a coffee or tea until the file processing completes!
+              <br />
+              We're extracting and analyzing the resume data.
+            </p>
           </div>
         </div>
       )}
@@ -164,101 +200,91 @@ const ResumeParserUI = () => {
         </nav>
       </div>
       <div className="centered-container">
-      <div className="main-content">
-        <div 
-          className={`drop-zone ${isDragging ? 'active' : ''}`}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className="drop-zone-content">
-            <div className="upload-icon">
-              <FiUpload />
+        <div className="main-content">
+          <div 
+            className={`drop-zone ${isDragging ? 'active' : ''}`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="drop-zone-content">
+              <div className="upload-icon">
+                <FiUpload />
+              </div>
+              <p className="drop-text">Drag and drop your resume files here</p>
+              <p className="file-formats">Supports PDF, DOCX and DOC files</p>
+              
+              <button onClick={triggerFileInput} className="select-files-btn">
+                Select Files
+              </button>
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                multiple 
+                accept=".pdf,.docx,.doc" 
+                onChange={handleFileSelect} 
+                style={{ display: 'none' }}
+              />
             </div>
-            <p className="drop-text">Drag and drop your resume files here</p>
-            <p className="file-formats">Supports PDF, DOCX and DOC files</p>
-            
-            <button onClick={triggerFileInput} className="select-files-btn">
-              Select Files
-            </button>
-            <input 
-              ref={fileInputRef}
-              type="file" 
-              multiple 
-              accept=".pdf,.docx,.doc" 
-              onChange={handleFileSelect} 
-              style={{ display: 'none' }}
-            />
           </div>
+          
+          {selectedFiles.length > 0 && (
+            <div className="selected-files">
+              <h3 className="selected-files-title">Selected Files ({selectedFiles.length})</h3>
+              <div className="file-list">
+                {selectedFiles.map((file, index) => (
+                  <div className="file-item" key={index}>
+                    <div className="file-item-icon">
+                      <FiPaperclip />
+                    </div>
+                    <div className="file-item-name">{file.name}</div>
+                    <div className="file-item-size">{(file.size / 1024).toFixed(1)} KB</div>
+                    <button 
+                      className="file-item-remove" 
+                      onClick={() => removeFile(index)}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="upload-actions">
+                <button 
+                  className="upload-btn"
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                >
+                  Upload {selectedFiles.length} {selectedFiles.length === 1 ? 'File' : 'Files'}
+                </button>
+                <button 
+                  className="clear-btn"
+                  onClick={() => setSelectedFiles([])}
+                  disabled={isUploading}
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {uploadError && (
+            <div className="error-message" style={{
+              padding: '1rem',
+              backgroundColor: '#FEE2E2',
+              color: '#B91C1C',
+              borderRadius: '0.5rem',
+              marginTop: '1rem'
+            }}>
+              <p>{uploadError}</p>
+            </div>
+          )}
+          
+          {/* Render upload results */}
+          {renderUploadResults()}
         </div>
-        
-        {selectedFiles.length > 0 && (
-          <div className="selected-files">
-            <h3 className="selected-files-title">Selected Files ({selectedFiles.length})</h3>
-            <div className="file-list">
-              {selectedFiles.map((file, index) => (
-                <div className="file-item" key={index}>
-                  <div className="file-item-icon">
-                    <FiPaperclip />
-                  </div>
-                  <div className="file-item-name">{file.name}</div>
-                  <div className="file-item-size">{(file.size / 1024).toFixed(1)} KB</div>
-                  <button 
-                    className="file-item-remove" 
-                    onClick={() => removeFile(index)}
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-            
-            <div className="upload-actions">
-              <button 
-                className="upload-btn"
-                onClick={handleUpload}
-                disabled={isUploading}
-              >
-                Upload {selectedFiles.length} {selectedFiles.length === 1 ? 'File' : 'Files'}
-              </button>
-              <button 
-                className="clear-btn"
-                onClick={() => setSelectedFiles([])}
-                disabled={isUploading}
-              >
-                Clear All
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {uploadError && (
-          <div className="error-message">
-            <p>{uploadError}</p>
-          </div>
-        )}
-        
-        {uploadResults && Array.isArray(uploadResults) && uploadResults.length > 0 && (
-          <div className="upload-results">
-            <h3>Upload Results</h3>
-            <div className="results-list">
-              {uploadResults.map((result, index) => (
-                <div className="result-item" key={index}>
-                  <div className="result-icon">
-                    <FiCheck />
-                  </div>
-                  <div className="result-name">{result.filename}</div>
-                  <div className={`result-status ${result.status === 'error' ? 'error' : ''}`}>
-                    {result.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-    </div>
     </div>
   );
 };

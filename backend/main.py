@@ -4,8 +4,6 @@ from app.api import file_uploads
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-
-
 app = FastAPI(title="HR First.AI", description="Backend for HR First.AI")
 
 # Configure CORS
@@ -17,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static files
+# # Serve static files
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Initialize templates

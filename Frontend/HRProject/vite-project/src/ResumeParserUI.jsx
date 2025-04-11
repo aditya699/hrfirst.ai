@@ -1,10 +1,15 @@
 import React, { useState, useRef } from 'react';
 import './ResumeParserUI.css';
 import { FiUpload, FiFile, FiCheck, FiPaperclip } from 'react-icons/fi';
+import axios from 'axios';
 
 const ResumeParserUI = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadResults, setUploadResults] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleDragEnter = (e) => {
@@ -50,32 +55,105 @@ const ResumeParserUI = () => {
     fileInputRef.current.click();
   };
 
-  // Features data
-  const features = [
-    {
-      id: 1,
-      title: 'Contact Information',
-      description: 'Automatically extract name, email, phone number'
-    },
-    {
-      id: 2,
-      title: 'Work Experience',
-      description: 'Parse job titles, companies, and timelines'
-    },
-    {
-      id: 3,
-      title: 'Education',
-      description: 'Extract degrees, institutions, and graduation dates'
-    },
-    {
-      id: 4,
-      title: 'Skills Analysis',
-      description: 'Identify technical and soft skills from content'
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
+    
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadError(null);
+    setUploadResults(null);
+    
+    console.log('Starting file upload process');
+    
+    // Create FormData object
+    const formData = new FormData();
+    
+    // Use 'files' as the parameter name to match FastAPI's expectation
+    selectedFiles.forEach(file => {
+      console.log(`Adding file to form: ${file.name} (${file.size} bytes)`);
+      formData.append('files', file);
+    });
+
+    try {
+      console.log('Sending upload request to API...');
+      
+      // Track upload progress using axios
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+          console.log(`Upload progress: ${percentCompleted}%`);
+        },
+      };
+
+      // Use the correct API endpoint path
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/upload-files-process/',
+        formData,
+        config
+      );
+      
+      console.log('Upload successful:', response.data);
+      setUploadResults(response.data);
+      
+      // Optional: Clear files after successful upload
+      // setSelectedFiles([]);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      
+      let errorMessage = 'An error occurred while uploading files.';
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+        
+        errorMessage = `Server error: ${error.response.status} - ${
+          error.response.data?.detail || 'Unknown error'
+        }`;
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('Error request:', error.request);
+        errorMessage = 'No response received from server. Please check if the server is running.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error message:', error.message);
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      setUploadError(errorMessage);
+    } finally {
+      // Keep progress at 100% for a moment before removing the overlay
+      setUploadProgress(100);
+      setTimeout(() => {
+        setIsUploading(false);
+      }, 500);
     }
-  ];
+  };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isUploading ? 'uploading' : ''}`}>
+      {isUploading && (
+        <div className="overlay">
+          <div className="progress-modal">
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar-fill" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="progress-percentage">{uploadProgress}% Complete</p>
+            <p className="friendly-message">Grab a coffee or tea until the file processing completes!</p>
+          </div>
+        </div>
+      )}
       <div className="sidebar">
         <div className="logo">HRFirst.ai</div>
         <nav className="nav-menu">
@@ -83,13 +161,9 @@ const ResumeParserUI = () => {
             <FiUpload className="nav-icon" />
             <span>Upload Resumes</span>
           </a>
-          {/* <a href="#" className="nav-item">
-            <FiFile className="nav-icon" />
-            <span>All Resumes</span>
-          </a> */}
         </nav>
       </div>
-      
+      <div className="centered-container">
       <div className="main-content">
         <div 
           className={`drop-zone ${isDragging ? 'active' : ''}`}
@@ -141,12 +215,17 @@ const ResumeParserUI = () => {
             </div>
             
             <div className="upload-actions">
-              <button className="upload-btn">
+              <button 
+                className="upload-btn"
+                onClick={handleUpload}
+                disabled={isUploading}
+              >
                 Upload {selectedFiles.length} {selectedFiles.length === 1 ? 'File' : 'Files'}
               </button>
               <button 
                 className="clear-btn"
                 onClick={() => setSelectedFiles([])}
+                disabled={isUploading}
               >
                 Clear All
               </button>
@@ -154,22 +233,32 @@ const ResumeParserUI = () => {
           </div>
         )}
         
-        {/* <div className="features-section">
-          <h2 className="features-title">Supported Features</h2>
-          
-          {features.map(feature => (
-            <div className="feature-card" key={feature.id}>
-              <div className="feature-icon">
-                <FiCheck className="check-icon" />
-              </div>
-              <div className="feature-content">
-                <h3 className="feature-name">{feature.title}</h3>
-                <p className="feature-description">{feature.description}</p>
-              </div>
+        {uploadError && (
+          <div className="error-message">
+            <p>{uploadError}</p>
+          </div>
+        )}
+        
+        {uploadResults && Array.isArray(uploadResults) && uploadResults.length > 0 && (
+          <div className="upload-results">
+            <h3>Upload Results</h3>
+            <div className="results-list">
+              {uploadResults.map((result, index) => (
+                <div className="result-item" key={index}>
+                  <div className="result-icon">
+                    <FiCheck />
+                  </div>
+                  <div className="result-name">{result.filename}</div>
+                  <div className={`result-status ${result.status === 'error' ? 'error' : ''}`}>
+                    {result.status}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div> */}
+          </div>
+        )}
       </div>
+    </div>
     </div>
   );
 };

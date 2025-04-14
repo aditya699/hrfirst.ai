@@ -294,6 +294,9 @@ async def upload_files(
 
 
 
+
+
+
 @app.post("/create-job-description/")
 async def create_job_description(
     request: Request,
@@ -355,10 +358,6 @@ async def create_job_description(
             user_email=user_email
         )
         
-        # If it's already an HTTPException, re-raise it
-        if isinstance(e, HTTPException):
-            raise
-            
         # Otherwise, convert to a generic HTTP 500 error
         raise HTTPException(status_code=500, detail="Error creating job description.")
 
@@ -418,10 +417,6 @@ async def get_job_description_pdf(request: Request, job_id: str):
             endpoint="export-job-description-pdf",
             job_id=job_id
         )
-        
-        # If it's already an HTTPException, re-raise it
-        if isinstance(e, HTTPException):
-            raise
             
         # Otherwise, convert to a generic HTTP 500 error
         raise HTTPException(status_code=500, detail="Error exporting PDF.")

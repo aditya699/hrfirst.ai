@@ -98,19 +98,6 @@ async def generate_pdf(job_data):
             elements.append(Paragraph(responsibilities, normal_style))
         elements.append(Spacer(1, 12))
     
-    # Requirements
-    if job_data.get("job_requirements"):
-        elements.append(Paragraph("Requirements", section_style))
-        requirements = job_data.get("job_requirements")
-        # Check if this is a string and try to format as bullet points if it contains line breaks
-        if isinstance(requirements, str) and "\n" in requirements:
-            for item in requirements.split("\n"):
-                if item.strip():
-                    elements.append(Paragraph(f"• {item.strip()}", normal_style))
-        else:
-            elements.append(Paragraph(requirements, normal_style))
-        elements.append(Spacer(1, 12))
-    
     # Skills
     if job_data.get("job_skills"):
         elements.append(Paragraph("Skills", section_style))

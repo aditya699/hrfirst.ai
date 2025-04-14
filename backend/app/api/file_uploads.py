@@ -11,6 +11,7 @@ from app.prompts.prompts import JD_PROMPT
 from fastapi import Body
 from bson.objectid import ObjectId #type: ignore
 from app.utils.pdf_gen import generate_pdf
+from app.utils.log_err import log_error
 from langchain_openai import ChatOpenAI
 from app.schemas.file_uploads import CVUserData
 from app.prompts.prompts import CV_DATA_PROMPT
@@ -20,7 +21,7 @@ from langchain_anthropic import ChatAnthropic #type: ignore
 from langchain_core.messages import HumanMessage
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import Docx2txtLoader
-from fastapi import APIRouter, File, HTTPException, UploadFile, Form
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Request
 
 load_dotenv()
 
@@ -31,7 +32,7 @@ CONTAINER_NAME=os.getenv("CONTAINER_NAME")
 CONNECTION_STRING=os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 
 llm=ChatOpenAI(model="gpt-4o-mini",temperature=0)
-llm_jd=ChatOpenAI(model="gpt-4o",temperature=0) 
+llm_jd=ChatOpenAI(model="gpt-4o-mini",temperature=0) 
 structured_llm=llm.with_structured_output(CVUserData)
 structured_llm_jd=llm_jd.with_structured_output(JD)
 blob_service_client=BlobServiceClient.from_connection_string(CONNECTION_STRING)
@@ -295,92 +296,111 @@ async def upload_files(
 
 @app.post("/create-job-description/")
 async def create_job_description(
-    information:str=Form(...),
+    request: Request,
+    information: str = Form(...),
     session_cookie: str = Form(...),  # session cookie(after the auth) 
 ):
     """
-    The function is used to create a job description.
+    Create a job description based on provided information.
 
     Args:
-        information:str=Form(...): The information about the job description , which the user has provided.
+        request (Request): FastAPI request object
+        information (str): The information about the job description provided by the user.
+        session_cookie (str): Session cookie for authentication.
 
     Returns:
-        dict: A dictionary containing the job description.
+        dict: A dictionary containing the job description and status message.
     """
-
-    user_id="123" #this would come after decoding the session cookie
-    user_email="test@test.com" #this would come after decoding the session cookie
+    # TODO: Implement proper session validation when auth is implemented
+    user_id = "123"  # Will come from session cookie after auth implementation
+    user_email = "test@test.com"  # Will come from session cookie after auth implementation
 
     try:
-        response=await structured_llm_jd.ainvoke(JD_PROMPT.format(user_requirements=information))
-        print(response)
-        data_dict={
-           "job_title":response.job_title,
-           "job_description":response.job_description,
-           "job_experience":response.job_experience,
-           "job_education":response.job_education,
-           "job_skills":response.job_skills,
-           "job_responsibilities":response.job_responsibilities,
-           "user_id":user_id,
-           "user_email":user_email,
-           "uploaded_at":datetime.now(),
-           "is_exported":0
+        # Generate job description using LLM
+        response = await structured_llm_jd.ainvoke(JD_PROMPT.format(user_requirements=information))
+        
+        # Create data dictionary from response
+        data_dict = {
+            "job_title": response.job_title,
+            "job_description": response.job_description,
+            "job_experience": response.job_experience,
+            "job_education": response.job_education,
+            "job_skills": response.job_skills,
+            "job_responsibilities": response.job_responsibilities,
+            "user_id": user_id,
+            "user_email": user_email,
+            "uploaded_at": datetime.now(),
+            "is_exported": 0
         }
-        client=await get_client()
-        if client:
-            db=client["hr-first"]
-            collection=db["jd-data"]
-            await collection.insert_one(data_dict)
-            # Convert the ObjectId to string for the response
-            data_dict["_id"] = str(data_dict["_id"])
-        return {"message":"Job description created successfully","job_description":data_dict}
+        
+        # Use the app-wide MongoDB connection
+        collection = request.app.mongodb["jd-data"]
+        result = await collection.insert_one(data_dict)
+        
+        # Convert ObjectId to string for the response
+        data_dict["_id"] = str(result.inserted_id)
+        
+        return {
+            "message": "Job description created successfully",
+            "job_description": data_dict
+        }
+            
     except Exception as e:
-        error_dict={
-            "error": str(e),
-            "endpoint": "create-job-description",
-            "timestamp": datetime.now()
-        }
-        client=await get_client()
-        if client:
-            db=client["hr-first"]
-            error_collection=db["error-log"]
-            await error_collection.insert_one(error_dict)
-        raise HTTPException(status_code=500, detail=f"Error creating job description: {str(e)}")
+        # Log all exceptions
+        await log_error(
+            request=request,
+            error=str(e),
+            endpoint="create-job-description",
+            user_id=user_id,
+            user_email=user_email
+        )
         
-        
-    
+        # If it's already an HTTPException, re-raise it
+        if isinstance(e, HTTPException):
+            raise
+            
+        # Otherwise, convert to a generic HTTP 500 error
+        raise HTTPException(status_code=500, detail="Error creating job description.")
+
+
 @app.get("/get-job-description-pdf/{job_id}")
-async def get_job_description_pdf(job_id: str):
+async def get_job_description_pdf(request: Request, job_id: str):
     """
-    This function is used to get the job description in PDF format.
+    Generate and return a job description as PDF.
+
+    Args:
+        request (Request): FastAPI request object
+        job_id (str): The ID of the job description to export.
+
+    Returns:
+        StreamingResponse: A PDF file of the job description.
     """
     try:
-        client = await get_client()
-        if not client:
-            raise HTTPException(status_code=500, detail="Failed to connect to database")
-        
-        db = client["hr-first"]
-        collection = db["jd-data"]
-
-        # Check if job_id is valid
+        # Validate job_id format
         if not ObjectId.is_valid(job_id):
-            raise HTTPException(status_code=400, detail="Invalid job ID")
+            raise HTTPException(status_code=400, detail="Invalid job ID format")
         
-        # Increment the is_exported field by 1
-        await collection.update_one({"_id": ObjectId(job_id)}, {"$inc": {"is_exported": 1}})
+        # Use the app-wide MongoDB connection
+        collection = request.app.mongodb["jd-data"]
+        job_id_obj = ObjectId(job_id)
         
-        job_description = await collection.find_one({"_id": ObjectId(job_id)})
-
-        if not job_description:
+        # Increment export counter and retrieve job description in one operation
+        result = await collection.find_one_and_update(
+            {"_id": job_id_obj}, 
+            {"$inc": {"is_exported": 1}},
+            return_document=True  # Return the updated document
+        )
+        
+        if not result:
             raise HTTPException(status_code=404, detail="Job description not found")
         
         # Generate PDF
-        pdf_buffer = await generate_pdf(job_description)
-
+        pdf_buffer = await generate_pdf(result)
+        
         # Create a safe filename
-        safe_title = job_description.get("job_title", "job-description").replace(" ", "-").lower()
+        safe_title = result.get("job_title", "job-description").replace(" ", "-").lower()
         filename = f"{safe_title}-{datetime.now().strftime('%Y-%m-%d')}.pdf"
-
+        
         # Return streaming response
         return StreamingResponse(
             iter([pdf_buffer.getvalue()]),
@@ -391,17 +411,19 @@ async def get_job_description_pdf(job_id: str):
         )
     
     except Exception as e:
-        # Log the error
-        error_dict = {
-            "error": str(e),
-            "endpoint": "export-job-description-pdf",
-            "job_id": job_id,
-            "timestamp": datetime.now()
-        }
+        # Log all exceptions
+        await log_error(
+            request=request,
+            error=str(e),
+            endpoint="export-job-description-pdf",
+            job_id=job_id
+        )
         
-        if 'client' in locals() and client:
-            error_collection = db["error-log"]
-            await error_collection.insert_one(error_dict)
-        
-        raise HTTPException(status_code=500, detail=f"Error exporting PDF: {str(e)}")
+        # If it's already an HTTPException, re-raise it
+        if isinstance(e, HTTPException):
+            raise
+            
+        # Otherwise, convert to a generic HTTP 500 error
+        raise HTTPException(status_code=500, detail="Error exporting PDF.")
+
 

@@ -18,8 +18,10 @@ Thoughts on extracting text from files:
 
 
 from datetime import datetime
-from fastapi import APIRouter, File, UploadFile, Form
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form
 from typing import List
+from io import BytesIO
+from fastapi.responses import StreamingResponse
 from azure.storage.blob import BlobServiceClient #type: ignore
 from langchain_community.document_loaders import PyPDFLoader
 from dotenv import load_dotenv
@@ -35,6 +37,11 @@ import base64
 from app.schemas.jd import JD
 from app.prompts.prompts import JD_PROMPT
 from fastapi import Body
+from bson.objectid import ObjectId #type: ignore
+from app.utils.pdf_gen import generate_pdf
+
+#import uuid for job_id 
+import uuid
 load_dotenv()
 
 os.environ["OPENAI_API_KEY"]=os.getenv("OPENAI_API_KEY")
@@ -383,7 +390,9 @@ async def create_job_description(
                 "company_website":company_website,
                 "user_id":user_id,
                 "user_email":user_email,
-                "uploaded_at":datetime.now()
+                "uploaded_at":datetime.now(),
+                "is_exported":0,
+                "ai_feature":1
             }
 
             #push metadata to mongodb
@@ -396,8 +405,6 @@ async def create_job_description(
                 # Convert the ObjectId to string before returning
                             # Convert the ObjectId to string before returning
                 dict_response["_id"] = str(result.inserted_id)
-
-
 
             return {"message":"Job description created successfully","job_description":dict_response}
 
@@ -442,6 +449,9 @@ async def create_job_description(
             "company_website":company_website,
             "user_id":user_id,
             "user_email":user_email,
+            "uploaded_at":datetime.now(),
+            "is_exported":0,
+            "ai_feature":0
         }
 
         #push metadata to mongodb
@@ -452,3 +462,62 @@ async def create_job_description(
             await collection.insert_one(master_dict)
 
         return {"message":"Job description created successfully","job_description":master_dict}
+
+
+
+@app.get("/get-job-description-pdf/{job_id}")
+async def get_job_description_pdf(job_id: str):
+    """
+    This function is used to get the job description in PDF format.
+    """
+    try:
+        client = await get_client()
+        if not client:
+            raise HTTPException(status_code=500, detail="Failed to connect to database")
+        
+        db = client["hr-first"]
+        collection = db["jd-data"]
+
+        # Check if job_id is valid
+        if not ObjectId.is_valid(job_id):
+            raise HTTPException(status_code=400, detail="Invalid job ID")
+        
+        # Increment the is_exported field by 1
+        await collection.update_one({"_id": ObjectId(job_id)}, {"$inc": {"is_exported": 1}})
+        
+        job_description = await collection.find_one({"_id": ObjectId(job_id)})
+
+        if not job_description:
+            raise HTTPException(status_code=404, detail="Job description not found")
+        
+        # Generate PDF
+        pdf_buffer = await generate_pdf(job_description)
+
+        # Create a safe filename
+        safe_title = job_description.get("job_title", "job-description").replace(" ", "-").lower()
+        filename = f"{safe_title}-{datetime.now().strftime('%Y-%m-%d')}.pdf"
+
+        # Return streaming response
+        return StreamingResponse(
+            iter([pdf_buffer.getvalue()]),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    
+    except Exception as e:
+        # Log the error
+        error_dict = {
+            "error": str(e),
+            "endpoint": "export-job-description-pdf",
+            "job_id": job_id,
+            "timestamp": datetime.now()
+        }
+        
+        if 'client' in locals() and client:
+            error_collection = db["error-log"]
+            await error_collection.insert_one(error_dict)
+        
+        raise HTTPException(status_code=500, detail=f"Error exporting PDF: {str(e)}")
+

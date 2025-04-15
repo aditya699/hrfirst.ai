@@ -4,6 +4,11 @@ from app.api import file_uploads
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from motor.motor_asyncio import AsyncIOMotorClient # type: ignore
+from azure.storage.blob import BlobServiceClient #type: ignore
+from langchain_openai import ChatOpenAI
+from app.schemas.file_uploads import CVUserData
+from app.schemas.jd import JD
+from app.prompts.prompts import CV_DATA_PROMPT,JD_PROMPT
 import os
 from dotenv import load_dotenv
 
@@ -38,6 +43,19 @@ async def startup_db_client():
     app.mongodb_client = AsyncIOMotorClient(MONGODB_URL)
     app.mongodb = app.mongodb_client["hr-first"]
     print("Connected to MongoDB")
+    CONNECTION_STRING=os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    CONTAINER_NAME=os.getenv("CONTAINER_NAME")
+    app.blob_container_client = BlobServiceClient.from_connection_string(CONNECTION_STRING).get_container_client(CONTAINER_NAME)
+    print("Connected to Blob Storage")
+    os.environ["OPENAI_API_KEY"]=os.getenv("OPENAI_API_KEY")
+    llm=ChatOpenAI(model="gpt-4o-mini",temperature=0)
+    llm_jd=ChatOpenAI(model="gpt-4o-mini",temperature=0) 
+    app.structured_llm=llm.with_structured_output(CVUserData)
+    app.structured_llm_jd=llm_jd.with_structured_output(JD)
+    print("GPT4o mini and GPT4o are initialized")
+    app.CV_DATA_PROMPT=CV_DATA_PROMPT
+    app.JD_PROMPT=JD_PROMPT
+    print("Prompts are initialized")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

@@ -27,6 +27,7 @@ Return the following data:
 -job_education
 -job_skills
 -job_responsibilities
+-Linkedin_url
 
 user_requirements:
 {user_requirements}

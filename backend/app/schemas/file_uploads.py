@@ -13,3 +13,4 @@ class CVUserData(BaseModel):
     education:str
     experience:str
     skills:str
+    linkedin_url:str

@@ -145,28 +145,78 @@ const ResumeParserUI = () => {
   const renderUploadResults = () => {
     if (!uploadResults) return null;
     
-    // Check if uploadResults has a message property (which your API returns)
-    if (uploadResults.message) {
-      // Display extracted data from the response
-      return (
-        <div className="upload-results">
-          <h3>Upload Results</h3>
-          <div className="results-content">
-            <p>{uploadResults.message}</p>
-            
-            {/* If you want to display the parsed resume data */}
-            {uploadResults.job_description && (
-              <div className="parsed-data">
-                <h4>Parsed Data</h4>
-                <pre>{JSON.stringify(uploadResults.job_description, null, 2)}</pre>
-              </div>
-            )}
-          </div>
+    return (
+      <div className="upload-results">
+        <h3>Upload Results</h3>
+        <div className="results-content">
+          {uploadResults.message && <p>{uploadResults.message}</p>}
+          
+          {uploadResults.details && (
+            <div className="parsed-data">
+              <h4>Parsed Resume Data</h4>
+              {Object.keys(uploadResults.details).map(fileName => {
+                const resumeData = uploadResults.details[fileName];
+                return (
+                  <div className="resume-card" key={fileName}>
+                    <h5 className="resume-file-name">{fileName}</h5>
+                    <div className="resume-info">
+                      <div className="resume-field">
+                        <strong>Name:</strong> {resumeData.name || 'Not Found'}
+                      </div>
+                      <div className="resume-field">
+                        <strong>Email:</strong> {resumeData.email || 'Not Found'}
+                      </div>
+                      <div className="resume-field">
+                        <strong>Phone:</strong> {resumeData.phone || 'Not Found'}
+                      </div>
+                      <div className="resume-field">
+                        <strong>Address:</strong> {resumeData.address || 'Not Found'}
+                      </div>
+                      <div className="resume-field">
+                        <strong>Education:</strong> {resumeData.education || 'Not Found'}
+                      </div>
+                      <div className="resume-field">
+                        <strong>Experience:</strong> {resumeData.experience || 'Not Found'}
+                      </div>
+                      <div className="resume-field">
+                        <strong>Skills:</strong> 
+                        <div className="skills-list">
+                          {resumeData.skills || 'Not Found'}
+                        </div>
+                      </div>
+                      {resumeData.linkedin_url && resumeData.linkedin_url !== 'Not Found' && (
+                        <div className="resume-field">
+                          <strong>LinkedIn:</strong> 
+                          <a href={resumeData.linkedin_url} target="_blank" rel="noopener noreferrer">
+                            {resumeData.linkedin_url}
+                          </a>
+                        </div>
+                      )}
+                      {resumeData.file_url && (
+                        <div className="resume-field">
+                          <strong>View Original:</strong> 
+                          <a href={resumeData.file_url} target="_blank" rel="noopener noreferrer">
+                            View Document
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          {/* Option to view raw JSON for debugging */}
+          <details className="raw-json-details">
+            <summary>View Raw JSON</summary>
+            <div className="raw-json">
+              <pre>{JSON.stringify(uploadResults, null, 2)}</pre>
+            </div>
+          </details>
         </div>
-      );
-    }
-    
-    return null;
+      </div>
+    );
   };
 
   return (

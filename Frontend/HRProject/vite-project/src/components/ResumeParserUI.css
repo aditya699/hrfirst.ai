@@ -1,0 +1,446 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: #1e293b;
+    line-height: 1.5;
+  }
+  
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+  
+  /* Layout */
+  .flex {
+    display: flex;
+  }
+  
+  .min-h-screen {
+    min-height: 100vh;
+  }
+  
+  .bg-slate-50 {
+    background-color: #f8fafc;
+  }
+  
+  /* Main Content */
+  .main-content {
+    margin-left: 16rem;
+    flex: 1;
+   
+    
+  }
+  
+  /* Hero Section */
+  .hero-section {
+    background-image: linear-gradient(to right, #f3e8ff, #fce7f3);
+    padding: 3rem 2rem;
+  }
+  
+  .hero-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+  }
+  
+  .hero-description {
+    color: #475569;
+    margin-bottom: 2.5rem;
+    max-width: 42rem;
+    font-size: 1.125rem;
+  }
+  
+  .highlight {
+    color: #52069e;
+  }
+  
+  /* Upload Area */
+  .upload-area {
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 2px dashed #e2e8f0;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    min-height: 180px;
+  }
+  
+  .upload-area:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .upload-area.dragging {
+    border-color: #a855f7;
+    background-color: #f9f5ff;
+  }
+  
+  .upload-icon-container {
+    flex-shrink: 0;
+    margin-right: 2rem;
+  }
+  
+  .upload-icon {
+    background-color: #f3e8ff;
+    border-radius: 9999px;
+    padding: 1.25rem;
+  }
+  
+  .arrow-icon {
+    height: 3rem;
+    width: 3rem;
+    color: #9333ea;
+  }
+  
+  .upload-content {
+    flex-grow: 1;
+  }
+  
+  .upload-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+  
+  .upload-description {
+    font-size: 1.125rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+  }
+  
+  .upload-formats {
+    font-size: 0.875rem;
+    color: #94a3b8;
+  }
+  
+  .upload-button-container {
+    flex-shrink: 0;
+    margin-left: 2rem;
+  }
+  
+  .upload-button {
+    background-color: #9333ea;
+    color: white;
+    font-weight: 500;
+    padding: 0.75rem 2rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s;
+    font-size: 1.125rem;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .upload-button:hover {
+    background-color: #7e22ce;
+  }
+  
+  /* Selected Files Section */
+  .selected-files-container {
+    background-color: white;
+    margin-top: 2rem;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .selected-files-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #1e293b;
+  }
+  
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .file-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: #f8fafc;
+    border-radius: 0.375rem;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .file-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    color: #64748b;
+  }
+  
+  .file-item-name {
+    flex-grow: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #334155;
+  }
+  
+  .file-item-size {
+    margin-right: 1rem;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+  
+  .file-item-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+  }
+  
+  .file-item-remove:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+  }
+  
+  .upload-actions {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .action-button {
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .upload-btn {
+    background-color: #9333ea;
+    color: white;
+  }
+  
+  .upload-btn:hover {
+    background-color: #7e22ce;
+  }
+  
+  .clear-btn {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .clear-btn:hover {
+    background-color: #e2e8f0;
+  }
+  
+  /* Error Message */
+  .error-message {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Upload Progress Overlay */
+  .upload-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .progress-modal {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    width: 90%;
+    max-width: 30rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  .progress-modal h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #1e293b;
+  }
+  
+  .progress-bar-container {
+    height: 0.75rem;
+    background-color: #f1f5f9;
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+  
+  .progress-bar-fill {
+    height: 100%;
+    background-color: #9333ea;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+  }
+  
+  .progress-percentage {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+  
+  .friendly-message {
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.5;
+  }
+  
+  /* Results Container */
+  .results-container {
+    background-color: white;
+    margin-top: 2rem;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .results-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #1e293b;
+  }
+  
+  .results-content {
+    color: #475569;
+  }
+  
+  .parsed-data {
+    margin-top: 1.5rem;
+  }
+  
+  .parsed-data h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+  }
+  
+  .parsed-data pre {
+    background-color: #f8fafc;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    border: 1px solid #e2e8f0;
+  }
+  
+  /* Features Section */
+  .features-section {
+    padding: 4rem 2rem;
+    background-image: linear-gradient(to right, #f3e8ff, #fce7f3);
+  }
+  
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  
+  .feature-card {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+    text-align: center;
+    transition: box-shadow 0.2s;
+  }
+  
+  .feature-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .feature-icon {
+    display: inline-block;
+    background-color: #f3e8ff;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .icon {
+    height: 2rem;
+    width: 2rem;
+    color: #9333ea;
+  }
+  
+  .feature-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .feature-description {
+    color: #64748b;
+    font-size: 0.875rem;
+  }
+  
+  /* Mission Statement */
+  .mission-section {
+    background: linear-gradient(to right, #f3e8ff, #fce7f3);
+    padding: 4rem 2rem;
+  }
+  
+  .mission-container {
+    max-width: 56rem;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .mission-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+  }
+  
+  .mission-text {
+    color: #475569;
+    line-height: 1.75;
+    font-size: 1.125rem;
+  }
+  
+  .highlight {
+    color: #9333ea;
+  }

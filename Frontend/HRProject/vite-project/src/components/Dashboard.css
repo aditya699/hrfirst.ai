@@ -1,0 +1,318 @@
+.candidates-container {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-left: 240px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 500px;
+}
+
+.header-section {
+  margin-bottom: 1.5rem;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 40%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  height: 1.25rem;
+  width: 1.25rem;
+  pointer-events: none;
+}
+
+.search-input {
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  width: 20rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-button,
+.add-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+.filter-button {
+  background: #fff;
+  border: 1px solid #d1d5db;
+}
+
+.filter-button:hover {
+  background: #f9fafb;
+}
+
+.add-button {
+  background: #8b5cf6;
+  border: none;
+  color: #fff;
+}
+
+.add-button:hover {
+  background: #7c3aed;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.candidates-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.candidates-table thead {
+  background: #f9fafb;
+}
+
+.candidates-table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sortable-header {
+  cursor: pointer;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+}
+
+.sort-icon {
+  height: 1rem;
+  width: 1rem;
+  margin-left: 0.25rem;
+}
+
+.actions-header {
+  text-align: right;
+}
+
+.candidates-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.candidate-row {
+  transition: background 0.2s;
+}
+
+.candidate-row:hover {
+  background: #f9fafb;
+}
+
+/* name + avatar */
+.candidate-name {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  flex-shrink: 0;
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 9999px;
+  background: #ede9fe;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar span {
+  color: #7c3aed;
+  font-weight: 500;
+}
+
+.name-info {
+  margin-left: 1rem;
+}
+
+.name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.file-name {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+
+.contact-info .email {
+  font-size: 0.875rem;
+  color: #1f2937;
+}
+
+.contact-info .phone {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+
+.education,
+.experience {
+  font-size: 0.875rem;
+  color: #1f2937;
+
+
+  max-width: unset;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+
+.skills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.skill-tag,
+.more-skills {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+}
+
+.skill-tag {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.more-skills {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.view-button {
+  background: none;
+  border: none;
+  color: #8b5cf6;
+  font-weight: 500;
+}
+
+
+.pagination {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-button,
+.prev-button,
+.next-button {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.page-button.active {
+  background: #8b5cf6;
+  color: #fff;
+  border-color: #8b5cf6;
+}
+
+.page-button:hover,
+.prev-button:hover,
+.next-button:hover {
+  background: #f3f4f6;
+}
+
+.page-button:disabled,
+.prev-button:disabled,
+.next-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.candidates-table thead th:nth-child(1),
+.candidates-table tbody td:nth-child(1) {
+  width: 250px;
+}
+
+.candidates-table thead th:nth-child(2),
+.candidates-table tbody td:nth-child(2) {
+  width: 300px;
+}
+
+.candidates-table thead th:nth-child(3),
+.candidates-table tbody td:nth-child(3) {
+  width: 280px;
+}
+
+.candidates-table thead th:nth-child(4),
+.candidates-table tbody td:nth-child(4) {
+  width: 320px;
+}
+
+.candidates-table thead th:nth-child(5),
+.candidates-table tbody td:nth-child(5) {
+  width: 400px;
+}
+
+.candidates-table thead th:nth-child(6),
+.candidates-table tbody td:nth-child(6) {
+  width: 120px;
+}

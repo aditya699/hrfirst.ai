@@ -126,8 +126,8 @@ const ResumeParserUI = () => {
       const dashboardCandidates = processResumesForDashboard(response.data);
       const existingCandidates = JSON.parse(sessionStorage.getItem('candidates') || '[]');
       const updatedCandidates = [...existingCandidates, ...dashboardCandidates];
-      sessionStorage.setItem('candidates', JSON.stringify(updatedCandidates));
-      // Display success message
+      sessionStorage.setItem('candidates', JSON.stringify(dashboardCandidates));
+      // Display success message 
       alert('Files uploaded successfully!Candidate data has been processed.');
 
     } catch (error) {

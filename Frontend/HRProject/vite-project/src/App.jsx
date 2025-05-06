@@ -19,7 +19,7 @@ const App = () => {
                 />
     
      <Route
-                path="/dashboard"
+                path="/candidates"
                 element={
                       <>
                        <Dashboard/>

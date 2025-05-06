@@ -224,6 +224,7 @@ const ResumeParserUI = () => {
       {isUploading && (
         <div className="overlay">
           <div className="progress-modal">
+          <h3>Uploading Files</h3>
             <h3>Uploading Files</h3>
             <div className="progress-bar-container">
               <div 

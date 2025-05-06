@@ -1,202 +1,155 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowUp, Paperclip, X } from 'lucide-react';
 import axios from 'axios';
 import './ResumeParserUI.css';
 import Sidebar from './sidebar/Sidebar';
-
 
 const ResumeParserUI = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
   const [uploadResults, setUploadResults] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
+  useEffect(() => {
+    if (!isUploading) {
+      setDisplayProgress(0);
+      return;
+    }
+    const STEP = 0.8;
+    const INTERVAL = 30;
+    const id = setInterval(() => {
+      setDisplayProgress(prev => {
+        const target = Math.min(
+          uploadProgress >= 99 ? 99 : uploadProgress,
+          100
+        );
+        if (prev + STEP < target) return prev + STEP;
+        if (prev < target) return target;
+        return prev;
+      });
+    }, INTERVAL);
+
+    return () => clearInterval(id);
+  }, [uploadProgress, isUploading]);
 
   const processResumesForDashboard = (apiResponse) => {
-    // Check if we have details (parsed resume data) in the response
     if (!apiResponse.details) return [];
-    // Extract the data and map it to the Dashboard format
-    const formattedCandidates = Object.keys(apiResponse.details).map(fileName => {
-      const resumeData = apiResponse.details[fileName];
-
-      // Map fields from API to Dashboard format
-      // Make sure to handle missing fields gracefully
+    return Object.keys(apiResponse.details).map((fileName) => {
+      const d = apiResponse.details[fileName] || {};
       return {
-        name: resumeData.name || 'Unknown',
-        fileName: fileName,
-        email: resumeData.email || '',
-        phone: resumeData.phone || '',
-        education: resumeData.education || '',
-        experience: resumeData.experience || '',
-        skills: resumeData.skills || '',
-        status: 'New' // Default status for new candidates
+        name: d.name || 'Unknown',
+        fileName,
+        email: d.email || '',
+        phone: d.phone || '',
+        education: d.education || '',
+        experience: d.experience || '',
+        skills: d.skills || '',
+        status: 'New',
       };
     });
-
-    return formattedCandidates;
   };
-
 
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
+  const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      setSelectedFiles(prev => [...prev, ...newFiles]);
+    if (e.dataTransfer.files?.length) {
+      setSelectedFiles((p) => [...p, ...Array.from(e.dataTransfer.files)]);
     }
   };
-
   const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles(prev => [...prev, ...newFiles]);
+    if (e.target.files?.length) {
+      setSelectedFiles((p) => [...p, ...Array.from(e.target.files)]);
     }
   };
-
-  const removeFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
-  };
-
-  // API Implementation
+  const removeFile = (i) =>
+    setSelectedFiles((p) => p.filter((_, idx) => idx !== i));
+  const triggerFileInput = () => fileInputRef.current.click();
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) return;
-
+    if (!selectedFiles.length) return;
     setIsUploading(true);
     setUploadProgress(0);
     setUploadError(null);
     setUploadResults(null);
 
-    console.log('Starting file upload process');
-
-    // Create FormData object
     const formData = new FormData();
-
-    // Add files to FormData
-    selectedFiles.forEach(file => {
-      console.log(`Adding file to form: ${file.name} (${file.size} bytes)`);
-      formData.append('files', file);
-    });
-
-    // Important: Add the session_cookie field required by the backend
-    formData.append('session_cookie', '123'); // Replace with actual session cookie in production
+    selectedFiles.forEach((f) => formData.append('files', f));
+    formData.append('session_cookie', '123');
 
     try {
-      console.log('Sending upload request to API...');
-
-      // Track upload progress using axios
       const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(percentCompleted);
-          console.log(`Upload progress: ${percentCompleted}%`);
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: ({ loaded, total }) =>
+          setUploadProgress(Math.round((loaded * 100) / total)),
       };
-
-      // Use the correct API endpoint path
-      const response = await axios.post(
+      const res = await axios.post(
         'http://127.0.0.1:8000/api/upload-files-process/',
         formData,
         config
       );
-
-      console.log('Upload successful:', response.data);
-      setUploadResults(response.data);
-      // Process the data for dashboard integration
-      const dashboardCandidates = processResumesForDashboard(response.data);
-      const existingCandidates = JSON.parse(sessionStorage.getItem('candidates') || '[]');
-      const updatedCandidates = [...existingCandidates, ...dashboardCandidates];
-      sessionStorage.setItem('candidates', JSON.stringify(dashboardCandidates));
-      // Display success message 
-      alert('Files uploaded successfully!Candidate data has been processed.');
-
-    } catch (error) {
-      console.error('Error uploading files:', error);
-
-      let errorMessage = 'An error occurred while uploading files.';
-
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
-
-        errorMessage = `Server error: ${error.response.status} - ${error.response.data?.detail || 'Unknown error'
-          }`;
-      } else if (error.request) {
-        // The request was made but no response was received
-        console.error('Error request:', error.request);
-        errorMessage = 'No response received from server. Please check if the server is running.';
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error message:', error.message);
-        errorMessage = `Error: ${error.message}`;
-      }
-
-      setUploadError(errorMessage);
+      setUploadResults(res.data);
+      const dashboard = processResumesForDashboard(res.data);
+      const existing = JSON.parse(sessionStorage.getItem('candidates') || '[]');
+      const updating = [...existing, ...dashboard];
+      sessionStorage.setItem(
+        'candidates',
+        JSON.stringify(dashboard)
+      );
+    } catch (err) {
+      const msg =
+        err.response
+          ? `Server error: ${err.response.status} - ${err.response.data?.detail || 'Unknown error'
+          }`
+          : err.request
+            ? 'No response received from server. Please check if the server is running.'
+            : `Error: ${err.message}`;
+      setUploadError(msg);
     } finally {
-      // Keep progress at 100% for a moment before removing the overlay
       setUploadProgress(100);
       setTimeout(() => {
         setIsUploading(false);
-        window.location.href = '/dashboard';
+        window.location.href = '/candidates';
       }, 500);
     }
   };
 
-  // Function to display parsed results from the API response - Using the detailed rendering from the first code sample
-  const renderUploadResults = () => {
-    if (!uploadResults) return null;
-
-    return (
+  const renderUploadResults = () =>
+    uploadResults && (
       <div className="results-container">
         <h3 className="results-title">Upload Results</h3>
         <div className="results-content">
           {uploadResults.message && <p>{uploadResults.message}</p>}
-          {/* Display job_description if provided in the API response */}
           {uploadResults.job_description && (
             <div className="parsed-data">
               <h4>Job Description</h4>
               <div className="job-description-content">
                 {typeof uploadResults.job_description === 'string'
                   ? uploadResults.job_description
-                  : Object.entries(uploadResults.job_description).map(([key, value]) => (
-                    <div className="job-field" key={key}>
-                      <strong>{key.replace(/_/g, ' ').toUpperCase()}:</strong> {value}
-                    </div>
-                  ))
-                }
+                  : Object.entries(uploadResults.job_description).map(
+                    ([k, v]) => (
+                      <div className="job-field" key={k}>
+                        <strong>{k.replace(/_/g, ' ').toUpperCase()}:</strong>{' '}
+                        {v}
+                      </div>
+                    )
+                  )}
               </div>
             </div>
           )}
         </div>
       </div>
     );
-  };
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* Upload Progress Overlay */}
+      {/* progress overlay */}
       {isUploading && (
         <div className="upload-overlay">
           <div className="progress-modal">
@@ -204,10 +157,12 @@ const ResumeParserUI = () => {
             <div className="progress-bar-container">
               <div
                 className="progress-bar-fill"
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
+                style={{ width: `${displayProgress}%` }}
+              />
             </div>
-            <p className="progress-percentage">{uploadProgress}% Complete</p>
+            <p className="progress-percentage">
+              {displayProgress.toFixed(0)}% Complete
+            </p>
             <p className="friendly-message">
               Grab a coffee or tea until the file processing completes!
               <br />
@@ -216,16 +171,19 @@ const ResumeParserUI = () => {
           </div>
         </div>
       )}
-
-      {/* Main Content */}
       <Sidebar />
       <div className="main-content">
         <div className="hero-section">
           <div className="container">
-            <h1 className="hero-title">Transform Resume Processing with <span className="highlight">AI</span></h1>
-            <p className="hero-description">Upload multiple resumes and instantly extract key candidate details, skills, and qualifications with our advanced <span className="highlight">AI</span> technology.</p>
+            <h1 className="hero-title">
+              Transform Resume Processing with <span className="highlight">AI</span>
+            </h1>
+            <p className="hero-description">
+              Upload multiple resumes and instantly extract key candidate details,
+              skills, and qualifications with our advanced{' '}
+              <span className="highlight">AI</span> technology.
+            </p>
 
-            {/* Larger Horizontal Upload Area */}
             <div
               className={`upload-area ${isDragging ? 'dragging' : ''}`}
               onDragOver={handleDragOver}
@@ -239,9 +197,16 @@ const ResumeParserUI = () => {
               </div>
 
               <div className="upload-content">
-                <h3 className="upload-title">Drag and drop your resume files here</h3>
-                <p className="upload-description">Our <span className="highlight">AI</span> will automatically extract and organize all important candidate information</p>
-                <p className="upload-formats">Supports PDF, DOCX and DOC files</p>
+                <h3 className="upload-title">
+                  Drag and drop your resume files here
+                </h3>
+                <p className="upload-description">
+                  Our <span className="highlight">AI</span> will automatically
+                  extract and organize all important candidate information
+                </p>
+                <p className="upload-formats">
+                  Supports PDF, DOCX and DOC files
+                </p>
               </div>
 
               <div className="upload-button-container">
@@ -259,21 +224,25 @@ const ResumeParserUI = () => {
               </div>
             </div>
 
-            {/* Selected Files Section */}
-            {selectedFiles.length > 0 && (
+            {/* selected files */}
+            {!!selectedFiles.length && (
               <div className="selected-files-container">
-                <h3 className="selected-files-title">Selected Files ({selectedFiles.length})</h3>
+                <h3 className="selected-files-title">
+                  Selected Files ({selectedFiles.length})
+                </h3>
                 <div className="file-list">
-                  {selectedFiles.map((file, index) => (
-                    <div className="file-item" key={index}>
+                  {selectedFiles.map((f, i) => (
+                    <div className="file-item" key={i}>
                       <div className="file-item-icon">
                         <Paperclip size={16} />
                       </div>
-                      <div className="file-item-name">{file.name}</div>
-                      <div className="file-item-size">{(file.size / 1024).toFixed(1)} KB</div>
+                      <div className="file-item-name">{f.name}</div>
+                      <div className="file-item-size">
+                        {(f.size / 1024).toFixed(1)} KB
+                      </div>
                       <button
                         className="file-item-remove"
-                        onClick={() => removeFile(index)}
+                        onClick={() => removeFile(i)}
                       >
                         <X size={16} />
                       </button>
@@ -287,7 +256,8 @@ const ResumeParserUI = () => {
                     onClick={handleUpload}
                     disabled={isUploading}
                   >
-                    Upload {selectedFiles.length} {selectedFiles.length === 1 ? 'File' : 'Files'}
+                    Upload {selectedFiles.length}{' '}
+                    {selectedFiles.length === 1 ? 'File' : 'Files'}
                   </button>
                   <button
                     className="action-button clear-btn"
@@ -300,14 +270,12 @@ const ResumeParserUI = () => {
               </div>
             )}
 
-            {/* Error Message */}
             {uploadError && (
               <div className="error-message">
                 <p>{uploadError}</p>
               </div>
             )}
 
-            {/* Render upload results */}
             {renderUploadResults()}
           </div>
         </div>
@@ -364,5 +332,4 @@ const ResumeParserUI = () => {
     </div>
   );
 };
-
 export default ResumeParserUI;
